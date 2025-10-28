@@ -1,5 +1,5 @@
 {
-  "name": "geolib-fullstack",
+  "name": "geolib",
   "version": "1.0.0",
   "description": "Full-stack application using Express and Vite/React.",
   "main": "server/server.js",
