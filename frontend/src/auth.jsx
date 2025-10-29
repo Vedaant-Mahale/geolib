@@ -22,7 +22,6 @@ const Auth = () => {
         // Simulate API delay
         setTimeout(() => {
             if (username === CORRECT_USERNAME && password === CORRECT_PASSWORD) {
-                // Successful login navigates to the dashboard, simulating navigate('/dash')
                 navigate('/dash');
             } else {
                 setError('Invalid username or password. Try user@library.com / password123');
@@ -36,7 +35,7 @@ const Auth = () => {
             <div className="max-w-md p-8 bg-white shadow-xl rounded-xl transition duration-300 hover:shadow-2xl">
                 <div className="flex flex-col items-center mb-6">
                     <Library className="w-12 h-12 text-indigo-600 mb-3" />
-                    <h1 className="text-3xl font-extrabold text-gray-900">GeoLibrary Access</h1>
+                    <h1 className="text-3xl font-extrabold text-gray-900">ProxLib Online Library</h1>
                     <p className="text-sm text-gray-500 mt-1">Sign in to find books near you.</p>
                 </div>
 
