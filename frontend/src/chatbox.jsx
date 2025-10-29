@@ -1,26 +1,60 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Send, ArrowLeft, BookOpen, MapPin, User, Info } from 'lucide-react';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { Send, ArrowLeft, BookOpen, MapPin, User, Info, MessageSquare } from 'lucide-react';
 
-const CURRENT_USER_ID = 'CurrentUser'; // Simulating your unique user ID
+// --- Global Constants (Must be available in the environment) ---
+// Note: In a real app, these would come from an Auth Context.
+const CURRENT_USER_ID = 'User_12345'; 
 
-// --- Chat Message Structure ---
-// role: 'user' (you) or 'lender' (the person you are talking to)
-// text: the message content
-
-const ChatBoxComponent = () => {
+const ChatBox = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const messagesEndRef = useRef(null);
 
   // Extract navigation state data
-  const { lenderUsername, location: lenderLocation, bookTitle, isIncomingChat } = location.state || {};
+  const { lenderUsername, location: lenderLocation, bookTitle, isIncomingChat, initialMessageContent } = location.state || {};
+  
+  // The username of the person you are chatting with
+  const OTHER_USER_ID = lenderUsername; 
 
-  // Define initial message as an empty array, allowing the user to initiate the conversation
-  // without any default, pre-filled messages.
-  const INITIAL_MESSAGES = []; 
+  /**
+   * Determines the initial state of the messages based on chat context.
+   * @param {string} bookTitle - Title of the book.
+   * @param {string} otherUsername - Username of the chat partner.
+   * @param {boolean} isIncomingChat - True if the current user received the first message.
+   * @param {string} content - The content of the initial message, if available (from MyMessages).
+   * @returns {Array} An array of initial message objects.
+   */
+  const getInitialMessages = (bookTitle, otherUsername, isIncomingChat, content) => {
+    // Case 1: Incoming chat (from MyMessages)
+    // The first message is sent by the OTHER user.
+    if (isIncomingChat && content) {
+        return [{
+            id: 1,
+            role: otherUsername, // Sender is the other user (Lender/Borrower)
+            text: content,
+        }];
+    } 
+    
+    // Case 2: Outgoing chat (from Dashboard) - Default message, sent by the CURRENT user.
+    // The default message is set to "Do you want my book?" + book context.
+    if (!isIncomingChat && bookTitle) {
+         return [{
+            id: 1,
+            role: CURRENT_USER_ID, // Sender is 'You'
+            text: `Do you want my book? I'm interested in borrowing "${bookTitle}".`,
+        }];
+    }
 
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+    // Default empty state if context is incomplete or ambiguous
+    return [];
+  };
+  
+  // Initialize state using the dynamic helper function
+  const [messages, setMessages] = useState(
+      getInitialMessages(bookTitle, OTHER_USER_ID, isIncomingChat, initialMessageContent)
+  );
+  
   const [input, setInput] = useState('');
 
   // Scrolls to the bottom of the chat window whenever messages update
@@ -28,20 +62,11 @@ const ChatBoxComponent = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Log details on page load (as requested earlier)
+  // Log details on page load and initial scroll
   useEffect(() => {
-    if (lenderUsername && bookTitle) {
-      console.log('--- Chat Page Loaded ---');
-      console.log('Chat Partner:', lenderUsername);
-      console.log('Book Title:', bookTitle);
-      console.log('Chat Context:', isIncomingChat ? 'Incoming (You are the Lender)' : 'Outgoing (You are the Borrower)');
-      if (lenderLocation) {
-        console.log('Lender Location (X, Y):', lenderLocation.x, lenderLocation.y);
-      }
-      console.log('------------------------');
-    }
+    // Scroll on initial load to show the latest messages/prompt
     scrollToBottom();
-  }, [lenderUsername, bookTitle, lenderLocation, isIncomingChat]);
+  }, [lenderUsername, bookTitle, isIncomingChat, initialMessageContent]); 
 
   // Scroll on message update
   useEffect(() => {
@@ -60,11 +85,10 @@ const ChatBoxComponent = () => {
 
     setMessages([...messages, newMessage]);
     setInput('');
-    
-    // Auto-reply simulation code has been removed.
   };
 
   if (!lenderUsername || !bookTitle) {
+    // Error screen if essential context is missing
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-100">
         <div className="p-8 bg-white rounded-xl shadow-lg text-center">
@@ -78,18 +102,18 @@ const ChatBoxComponent = () => {
   }
 
   return (
-    <div className="min-h-screen w-screen flex flex-col bg-gray-100">
+    <div className="min-h-screen w-screen flex flex-col bg-gray-100 font-sans">
       
       {/* Header */}
-      <div className="bg-white p-4 shadow-md sticky top-0 z-10 border-b border-indigo-200">
+      <div className="bg-white p-4 shadow-xl sticky top-0 z-10 border-b-4 border-indigo-400">
         <div className="flex items-center justify-between max-w-4xl mx-auto">
             <button 
-                onClick={() => isIncomingChat ? navigate('/mymessages') : navigate('/dash')}
-                className="flex items-center text-indigo-600 hover:text-indigo-800 transition"
+                onClick={() => navigate(isIncomingChat ? '/mymessages' : '/dash')}
+                className="flex items-center text-indigo-600 hover:text-indigo-800 transition p-2 rounded-lg hover:bg-indigo-50"
                 title="Go Back"
             >
                 <ArrowLeft className="w-5 h-5 mr-2" />
-                <span className="hidden sm:inline">Back</span>
+                <span className="hidden sm:inline font-medium">Back</span>
             </button>
 
             <div className="text-center flex-1 mx-4">
@@ -106,7 +130,7 @@ const ChatBoxComponent = () => {
             <div className="w-16">
                 {lenderLocation && (
                     <div className="flex items-center text-sm text-gray-500">
-                        <MapPin className="w-4 h-4 mr-1" />
+                        <MapPin className="w-4 h-4 mr-1 text-red-400" />
                         Loc: {lenderLocation.x},{lenderLocation.y}
                     </div>
                 )}
@@ -117,45 +141,60 @@ const ChatBoxComponent = () => {
       {/* Chat Messages Container */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 max-w-4xl mx-auto w-full">
         {messages.map((message) => {
+          // Check if the message was sent by the current user
           const isMe = message.role === CURRENT_USER_ID;
+          // Use the lenderUsername for the other user's name display
+          const senderName = isMe ? 'You' : lenderUsername; 
+
           return (
             <div
               key={message.id}
               className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-xs sm:max-w-md px-4 py-2 rounded-xl shadow-md text-white ${
+                className={`max-w-xs sm:max-w-md px-4 py-3 rounded-xl shadow-lg transition duration-200 ${
                   isMe
-                    ? 'bg-indigo-600 rounded-br-none'
-                    : 'bg-green-600 rounded-tl-none'
+                    ? 'bg-indigo-600 rounded-br-none text-white'
+                    : 'bg-white rounded-tl-none text-gray-800 border border-gray-200'
                 }`}
               >
-                <p className="text-xs font-semibold mb-1 opacity-80">{isMe ? 'You' : message.role}</p>
+                <p className={`text-xs font-bold mb-1 ${isMe ? 'text-indigo-100' : 'text-green-600'}`}>
+                  {senderName}
+                </p>
                 <p className="break-words">{message.text}</p>
               </div>
             </div>
           );
         })}
+        {messages.length === 0 && (
+             <div className="text-center text-gray-500 pt-10">
+                <MessageSquare className="w-8 h-8 mx-auto mb-2 text-indigo-400" />
+                <p className="font-semibold">Start a conversation with {lenderUsername}!</p>
+                <p className="text-sm">Type your first message below to borrow the book.</p>
+            </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Form */}
-      <div className="bg-white p-4 border-t border-gray-200 sticky bottom-0 z-10">
+      <div className="bg-white p-4 border-t border-gray-300 sticky bottom-0 z-10 shadow-inner">
         <form onSubmit={handleSend} className="flex max-w-4xl mx-auto">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={`Start chatting with ${lenderUsername}...`}
-            className="flex-1 p-3 border border-gray-300 rounded-l-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 outline-none"
+            placeholder={`Type a reply to ${lenderUsername}...`}
+            className="flex-1 p-3 border-2 border-gray-200 rounded-l-xl focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 outline-none shadow-inner"
             aria-label="Type your message"
           />
           <button
             type="submit"
-            className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-r-lg shadow-md hover:bg-indigo-700 transition duration-150 flex items-center justify-center"
+            className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-r-xl shadow-lg hover:bg-indigo-700 transition duration-150 flex items-center justify-center disabled:opacity-50"
             title="Send Message"
+            disabled={input.trim() === ''}
           >
-            <Send className="w-5 h-5" />
+            <Send className="w-5 h-5 mr-2 sm:mr-0" />
+            <span className="hidden sm:inline">Send</span>
           </button>
         </form>
       </div>
@@ -163,4 +202,4 @@ const ChatBoxComponent = () => {
   );
 };
 
-export default ChatBoxComponent;
+export default ChatBox

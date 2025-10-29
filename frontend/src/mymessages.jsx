@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { MessageSquare, ArrowLeft, BookOpen, User, Clock, Mail } from 'lucide-react';
 
-// --- Dummy Data Simulating Inbox Messages ---
-// These messages are sent by other users regarding the books you listed in MyBooks.jsx.
+// --- Dummy Data Simulating Inbox Messages (The actual messages displayed in the inbox) ---
+// This data would typically come from a database like Firestore in a real application.
 const DUMMY_MESSAGES = [
   {
     id: 1,
@@ -44,11 +44,11 @@ const MyMessages = () => {
   const [messages, setMessages] = useState(DUMMY_MESSAGES);
 
   const handleBack = () => {
-    navigate('/dashboard'); // Navigate back to the main dashboard
+    navigate('/dash'); // Navigate back to the main dashboard
   };
 
   const handleMarkAsRead = (id) => {
-    // In a real app, this would update Firestore. Here, it updates local state.
+    // Simulates marking a message as read
     setMessages(prevMessages =>
       prevMessages.map(msg =>
         msg.id === id ? { ...msg, status: 'read' } : msg
@@ -58,7 +58,7 @@ const MyMessages = () => {
 
   /**
    * Handles navigation to the chat page when an incoming message is clicked.
-   * Passes the sender's username as the 'lenderUsername' to reuse the existing ChatBox component.
+   * Passes the message content to initialize the ChatBoxComponent.
    * @param {object} message The message object that was clicked.
    */
   const handleViewMessage = (message) => {
@@ -66,11 +66,11 @@ const MyMessages = () => {
     handleMarkAsRead(message.id);
     
     // 2. Navigate to the chat page, passing the required state.
-    // We map the senderUsername to lenderUsername to keep the existing ChatBox happy.
     navigate('/chat', { state: {
         lenderUsername: message.senderUsername, 
         bookTitle: message.bookTitle,
-        // Note: Location is omitted as it's not relevant/available for a received message
+        isIncomingChat: true, // Signal it's an INCOMING chat
+        initialMessageContent: message.content, // <<< PASSES THE MESSAGE CONTENT
     }});
   };
 
@@ -83,7 +83,7 @@ const MyMessages = () => {
 
   return (
     <div className="min-h-screen w-screen bg-gray-50 p-4 sm:p-8">
-      <header className="flex justify-between items-center pb-6 border-b border-indigo-200 mb-6">
+      <header className="flex justify-between items-center pb-6 border-b border-indigo-200 mb-6 max-w-4xl mx-auto">
         <div className="flex items-center">
           <MessageSquare className="w-8 h-8 text-indigo-600 mr-3" />
           <h1 className="text-3xl font-bold text-gray-800">My Messages</h1>
@@ -115,7 +115,6 @@ const MyMessages = () => {
                       ? 'bg-white border-l-4 border-indigo-500 hover:bg-indigo-50' 
                       : 'bg-white border border-gray-200 hover:bg-gray-100'
                   }`}
-                  // Updated onClick handler to pass the full message object
                   onClick={() => handleViewMessage(message)}
                 >
                   <div className="flex justify-between items-center mb-2 flex-wrap">
@@ -130,7 +129,9 @@ const MyMessages = () => {
                     {/* Timestamp */}
                     <div className="flex items-center text-xs text-gray-500">
                         <Clock className="w-3 h-3 mr-1" />
-                        {new Date(message.timestamp).toLocaleDateString()}
+                        {new Date(message.timestamp).toLocaleDateString(undefined, {
+                            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                        })}
                     </div>
                   </div>
 
@@ -160,4 +161,4 @@ const MyMessages = () => {
   );
 };
 
-export default MyMessages;
+export default MyMessages
