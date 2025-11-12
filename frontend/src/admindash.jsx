@@ -1,24 +1,26 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { LogOut, Trash2, RefreshCcw, Star, User, Users, AlertTriangle, CheckCircle, X } from 'lucide-react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+// ADDED useLocation to retrieve the authentication token from the login state
+import { useNavigate, useLocation } from 'react-router-dom';
 
 // --- API Configuration ---
 const API_BASE_URL = 'https://geolib.onrender.com';
 const ADMIN_API_URL = `${API_BASE_URL}/admin`;
 // -------------------------
 
-// NOTE: In a real application, the admin token would be managed securely (e.g., in a Context or local storage)
-// after a successful login API call. For this demonstration, it is initialized as a placeholder.
-
 const AdminDash = () => {
     const navigate = useNavigate();
+    const location = useLocation(); // Hook to access navigation state
+
     const [users, setUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
-    // Placeholder for the Admin Token. REPLACE THIS with a valid token after login.
-    const [adminToken, setAdminToken] = useState('YOUR_ADMIN_AUTH_TOKEN_HERE');
+
+    // Retrieve the token from the navigation state, or use placeholder if accessed directly
+    const initialToken = location.state?.authToken || 'YOUR_ADMIN_AUTH_TOKEN_HERE';
+    const [adminToken, setAdminToken] = useState(initialToken);
 
     // --- Modal State for Custom Confirmation/Input ---
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,6 +68,13 @@ const AdminDash = () => {
 
     // --- 1. Fetch All Users (GET /admin/users) ---
     const fetchUsers = useCallback(async () => {
+        // If the token is the placeholder, block the call and show a warning.
+        if (!adminToken || adminToken === 'YOUR_ADMIN_AUTH_TOKEN_HERE') {
+            showNotification('Admin token not set. Please log in first.', false);
+            setUsers([]);
+            return;
+        }
+
         setIsLoading(true);
         setError('');
         try {
@@ -75,7 +84,7 @@ const AdminDash = () => {
                 },
             });
             setUsers(response.data);
-            showNotification('User list refreshed.', true);
+            showNotification('User list refreshed from database.', true);
 
         } catch (err) {
             console.error('Fetch Users Error:', err);
@@ -89,7 +98,7 @@ const AdminDash = () => {
 
     useEffect(() => {
         fetchUsers();
-    }, [fetchUsers]); // Depends only on fetchUsers (which includes token and showNotification)
+    }, [fetchUsers]); // Fetch users whenever the component loads or token changes
 
     // --- 2. Update Rating Core Logic (PUT /admin/users/:id/rating) ---
     const updateRating = async (userId, newRating) => {
@@ -101,7 +110,7 @@ const AdminDash = () => {
         }
 
         if (!adminToken || adminToken === 'YOUR_ADMIN_AUTH_TOKEN_HERE') {
-            showNotification('API call skipped. Admin token is placeholder.', false);
+            showNotification('API call skipped. Admin token is missing.', false);
             return;
         }
 
@@ -116,7 +125,7 @@ const AdminDash = () => {
             if (response.status === 200) {
                 // Update local state based on successful API response
                 setUsers(prev => prev.map(u => u.id === userId ? { ...u, rating: response.data.user.rating } : u));
-                showNotification(`Rating for User ${userId} updated to ${response.data.user.rating}.`, true);
+                showNotification(`Rating for User ${userId} updated to ${response.data.user.rating.toFixed(2)}.`, true);
             }
         } catch (err) {
             console.error('Update Rating Error:', err);
@@ -127,7 +136,7 @@ const AdminDash = () => {
     // --- 3. Delete User Core Logic (DELETE /admin/users/:id) ---
     const deleteUser = async (userId, userName) => {
         if (!adminToken || adminToken === 'YOUR_ADMIN_AUTH_TOKEN_HERE') {
-            showNotification('API call skipped. Admin token is placeholder.', false);
+            showNotification('API call skipped. Admin token is missing.', false);
             return;
         }
 
@@ -141,7 +150,7 @@ const AdminDash = () => {
             if (response.status === 200) {
                 // Remove the user from the local state
                 setUsers(prev => prev.filter(u => u.id !== userId));
-                showNotification(`User ${userName} successfully deleted.`, true);
+                showNotification(`User ${userName} successfully deleted from database.`, true);
             }
         } catch (err) {
             console.error('Delete User Error:', err);
@@ -177,7 +186,7 @@ const AdminDash = () => {
     const handleDeleteUser = (user) => {
         openModal({
             title: 'Confirm User Deletion',
-            message: `This action will permanently DELETE user: ${user.name} (ID: ${user.id}) and cannot be undone.`,
+            message: `This action will permanently DELETE user: ${user.name} (ID: ${user.id}) from the database and cannot be undone.`,
             type: 'confirm',
             action: () => deleteUser(user.id, user.name),
         });
@@ -225,7 +234,7 @@ const AdminDash = () => {
                         <button
                             onClick={onSubmit}
                             className={`px-4 py-2 text-sm font-medium text-white rounded-full transition ${config.type === 'input'
-                                    ? 'bg-indigo-600 hover:bg-indigo-700'
+                                    ? 'bg-green-600 hover:bg-green-700' // Changed to green for Update
                                     : 'bg-red-600 hover:bg-red-700'
                                 }`}
                         >
@@ -246,7 +255,11 @@ const AdminDash = () => {
                     ProxLib Admin Dashboard
                 </h1>
                 <button
-                    onClick={() => navigate('/admin')}
+                    onClick={() => {
+                        // On Logout, clear the token and navigate back to admin login
+                        setAdminToken('YOUR_ADMIN_AUTH_TOKEN_HERE');
+                        navigate('/admin');
+                    }}
                     className="flex items-center text-sm font-medium text-red-600 hover:text-red-700 bg-red-100 px-3 py-2 rounded-lg transition"
                 >
                     <LogOut className="w-4 h-4 mr-1" />
@@ -296,7 +309,7 @@ const AdminDash = () => {
                             {users.length === 0 && !isLoading ? (
                                 <tr>
                                     <td colSpan="4" className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
-                                        No users found. Ensure you have a valid Admin Token set.
+                                        No users found. Ensure you are logged in and the Admin Token is valid.
                                     </td>
                                 </tr>
                             ) : (
@@ -308,7 +321,8 @@ const AdminDash = () => {
                                             {user.name}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-semibold">
-                                            {typeof user.rating === 'number' ? user.rating.toFixed(2) : 'N/A'}
+                                            {/* Display rating formatted to 2 decimal places */}
+                                            {typeof user.rating === 'number' ? user.rating.toFixed(2) : '0.00'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                                             <button
