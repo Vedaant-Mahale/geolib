@@ -25,14 +25,12 @@ router.post('/login', async (req, res) => {
         // Find admin user in the 'admin' table
         const result = await pool.query('SELECT * FROM admin WHERE name = $1', [name]);
         if (result.rows.length === 0) {
-            return res.status(401).json({ error: 'Invalid admin credentials', name: name });
+            return res.status(401).json({ error: 'Invalid admin credentials'});
         }
 
         const user = result.rows[0];
 
-        // Compare password hash
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
+        if (password != user.password) {
             return res.status(401).json({ error: 'Invalid admin credentials' });
         }
 
