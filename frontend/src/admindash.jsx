@@ -68,13 +68,6 @@ const AdminDash = () => {
 
     // --- 1. Fetch All Users (GET /admin/users) ---
     const fetchUsers = useCallback(async () => {
-        // If the token is the placeholder, block the call and show a warning.
-        if (!adminToken || adminToken === 'YOUR_ADMIN_AUTH_TOKEN_HERE') {
-            showNotification('Admin token not set. Please log in first.', false);
-            setUsers([]);
-            return;
-        }
-
         setIsLoading(true);
         setError('');
         try {
