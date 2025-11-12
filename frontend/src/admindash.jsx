@@ -75,10 +75,11 @@ const AdminDash = () => {
                     Authorization: `Bearer ${adminToken}`,
                 },
             });
-            
+
             // FIX: Ensure response.data is an array before setting state. 
             // This prevents "c.map is not a function" if the API returns an object or null.
             const fetchedUsers = Array.isArray(response.data) ? response.data : [];
+            console.log(fetchedUsers);
             setUsers(fetchedUsers);
 
             showNotification('User list refreshed from database.', true);
@@ -233,7 +234,7 @@ const AdminDash = () => {
                             className={`px-4 py-2 text-sm font-medium text-white rounded-full transition ${config.type === 'input'
                                 ? 'bg-green-600 hover:bg-green-700' // Changed to green for Update
                                 : 'bg-red-600 hover:bg-red-700'
-                            }`}
+                                }`}
                         >
                             {config.type === 'input' ? 'Save Rating' : 'Confirm Action'}
                         </button>
