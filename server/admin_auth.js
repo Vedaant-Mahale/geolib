@@ -25,7 +25,7 @@ router.post('/login', async (req, res) => {
         // Find admin user in the 'admin' table
         const result = await pool.query('SELECT * FROM admin WHERE name = $1', [name]);
         if (result.rows.length === 0) {
-            return res.status(401).json({ error: 'Invalid admin credentials' });
+            return res.status(401).json({ error: 'Invalid admin credentials', name: name });
         }
 
         const user = result.rows[0];
