@@ -27,6 +27,8 @@ const Admin = () => {
 
         try {
             // Sending request to the new /admin/login endpoint
+            console.log(username);
+            console.log(password);
             const response = await axios.post(ADMIN_LOGIN_URL, {
                 name: username,
                 password: password,
