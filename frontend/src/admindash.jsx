@@ -66,12 +66,6 @@ const AdminDash = () => {
 
     // --- 1. Fetch All Users (GET /admin/users) ---
     const fetchUsers = useCallback(async () => {
-        if (!adminToken || adminToken === 'YOUR_ADMIN_AUTH_TOKEN_HERE') {
-            showNotification('Admin token not set. API calls disabled.', false);
-            setUsers([]); // Clear users if no token
-            return;
-        }
-
         setIsLoading(true);
         setError('');
         try {
