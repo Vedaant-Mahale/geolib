@@ -78,7 +78,7 @@ const AdminDash = () => {
 
             // FIX: Ensure response.data is an array before setting state. 
             // This prevents "c.map is not a function" if the API returns an object or null.
-            const fetchedUsers = Array.isArray(response.data) ? response.data : [];
+            const fetchedUsers = response.data
             console.log(fetchedUsers);
             setUsers(fetchedUsers);
 
