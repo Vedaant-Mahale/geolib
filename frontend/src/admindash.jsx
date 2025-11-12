@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { LogOut, Trash2, RefreshCcw, Star, User, Users, AlertTriangle, CheckCircle, X } from 'lucide-react';
 import axios from 'axios';
-// ADDED useLocation to retrieve the authentication token from the login state
 import { useNavigate, useLocation } from 'react-router-dom';
 
 // --- API Configuration ---
@@ -11,7 +10,7 @@ const ADMIN_API_URL = `${API_BASE_URL}/admin`;
 
 const AdminDash = () => {
     const navigate = useNavigate();
-    const location = useLocation(); // Hook to access navigation state
+    const location = useLocation();
 
     const [users, setUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -76,7 +75,12 @@ const AdminDash = () => {
                     Authorization: `Bearer ${adminToken}`,
                 },
             });
-            setUsers(response.data);
+            
+            // FIX: Ensure response.data is an array before setting state. 
+            // This prevents "c.map is not a function" if the API returns an object or null.
+            const fetchedUsers = Array.isArray(response.data) ? response.data : [];
+            setUsers(fetchedUsers);
+
             showNotification('User list refreshed from database.', true);
 
         } catch (err) {
@@ -227,9 +231,9 @@ const AdminDash = () => {
                         <button
                             onClick={onSubmit}
                             className={`px-4 py-2 text-sm font-medium text-white rounded-full transition ${config.type === 'input'
-                                    ? 'bg-green-600 hover:bg-green-700' // Changed to green for Update
-                                    : 'bg-red-600 hover:bg-red-700'
-                                }`}
+                                ? 'bg-green-600 hover:bg-green-700' // Changed to green for Update
+                                : 'bg-red-600 hover:bg-red-700'
+                            }`}
                         >
                             {config.type === 'input' ? 'Save Rating' : 'Confirm Action'}
                         </button>
@@ -364,4 +368,4 @@ const AdminDash = () => {
     );
 };
 
-export default AdminDash;
+export default AdminDash
