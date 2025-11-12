@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from "react-router-dom";
-import { LogIn, Library, X, UserPlus } from 'lucide-react';
+import { LogIn, Library, X, UserPlus, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 
 // --- API Configuration ---
@@ -14,18 +14,20 @@ const Auth = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [successMessage, setSuccessMessage] = useState(''); // New state for success messages
     const [isLoading, setIsLoading] = useState(false);
     const [isLoginView, setIsLoginView] = useState(true);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccessMessage(''); // Clear both messages on new submit
         setIsLoading(true);
 
         // Determine the endpoint based on the current view
         const endpoint = isLoginView ? '/login' : '/register';
 
-        // Update the API_BASE_URL to include the '/auth' prefix (assuming you mounted the router at '/auth')
+        // Update the API_BASE_URL to include the '/auth' prefix
         const AUTH_URL = `${API_BASE_URL}/auth`;
 
         try {
@@ -37,9 +39,7 @@ const Auth = () => {
             // Handle successful response
             if (response.status === 200) {
                 // Successful Login
-                // 💡 Destructure token AND userid from the response data
                 const { token, userid } = response.data;
-                // 💡 Navigate to /dash, passing the token and userid via state
                 navigate('/dash', {
                     state: {
                         authToken: token,
@@ -49,8 +49,8 @@ const Auth = () => {
 
             } else if (response.status === 201) {
                 // Successful Register
-                // IMPORTANT: Replacing alert() with a custom error/success message
-                setError('Registration successful! Please sign in with your new account.');
+                // Now uses the successMessage state
+                setSuccessMessage('Registration successful! Please sign in with your new account.');
                 setIsLoginView(true); // Switch to login view after successful registration
             }
 
@@ -78,6 +78,7 @@ const Auth = () => {
     const toggleView = () => {
         setIsLoginView(!isLoginView);
         setError('');
+        setSuccessMessage(''); // Clear messages on view toggle
         setUsername('');
         setPassword('');
     };
@@ -131,10 +132,19 @@ const Auth = () => {
                         </div>
                     </div>
 
+                    {/* RED ALERT: For errors only */}
                     {error && (
                         <div className="flex items-center p-3 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">
                             <X className="w-4 h-4 mr-2" />
                             <span className="font-medium">{error}</span>
+                        </div>
+                    )}
+
+                    {/* GREEN ALERT: For success messages */}
+                    {successMessage && (
+                        <div className="flex items-center p-3 text-sm text-green-700 bg-green-100 rounded-lg" role="alert">
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            <span className="font-medium">{successMessage}</span>
                         </div>
                     )}
 
