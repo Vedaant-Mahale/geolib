@@ -1,25 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { LogOut, Trash2, RefreshCcw, Star, User, Users, AlertTriangle, CheckCircle, X } from 'lucide-react';
 import axios from 'axios';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 // --- API Configuration ---
 const API_BASE_URL = 'https://geolib.onrender.com';
 const ADMIN_API_URL = `${API_BASE_URL}/admin`;
+// Token definition removed
 // -------------------------
 
 const AdminDash = () => {
     const navigate = useNavigate();
-    const location = useLocation();
+    // Removed useLocation as token is no longer passed
 
     const [users, setUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
-    // Retrieve the token from the navigation state, or use placeholder if accessed directly
-    const initialToken = location.state?.authToken || 'YOUR_ADMIN_AUTH_TOKEN_HERE';
-    const [adminToken, setAdminToken] = useState(initialToken);
+    // Removed adminToken state
 
     // --- Modal State for Custom Confirmation/Input ---
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -67,57 +66,49 @@ const AdminDash = () => {
 
     // --- 1. Fetch All Users (GET /admin/users) ---
     const fetchUsers = useCallback(async () => {
+        // Token checks and logging removed entirely.
+
         setIsLoading(true);
         setError('');
-        try {
-            const response = await axios.get(`${ADMIN_API_URL}/users`, {
-                headers: {
-                    Authorization: `Bearer ${adminToken}`,
-                },
-            });
 
-            // FIX: Ensure response.data is an array before setting state. 
-            // This prevents "c.map is not a function" if the API returns an object or null.
+        try {
+            // Authorization header removed.
+            const response = await axios.get(`${ADMIN_API_URL}/users`);
+
             const fetchedUsers = Array.isArray(response.data) ? response.data : [];
-            console.log(response);
             setUsers(fetchedUsers);
 
             showNotification('User list refreshed from database.', true);
 
         } catch (err) {
-            console.error('Fetch Users Error:', err);
-            const msg = err.response?.data?.error || 'Failed to fetch users. Check API endpoint and token.';
+            console.error('Fetch Users Error:', err.response || err.message);
+            // Simplified error message
+            let msg = err.response?.data?.error || 'Failed to fetch users. Check API endpoint and server status.';
+
             showNotification(msg, false);
             setUsers([]);
         } finally {
             setIsLoading(false);
         }
-    }, [adminToken, showNotification]);
+    }, [showNotification]); // adminToken dependency removed
 
     useEffect(() => {
         fetchUsers();
-    }, [fetchUsers]); // Fetch users whenever the component loads or token changes
+    }, [fetchUsers]); // Fetch users whenever the component loads
 
     // --- 2. Update Rating Core Logic (PUT /admin/users/:id/rating) ---
     const updateRating = async (userId, newRating) => {
-        // Validation moved from modal input handler
+        // Validation 
         const ratingValue = parseFloat(newRating);
         if (isNaN(ratingValue) || ratingValue < 0) {
             showNotification('Invalid rating value. Must be a non-negative number.', false);
             return;
         }
 
-        if (!adminToken || adminToken === 'YOUR_ADMIN_AUTH_TOKEN_HERE') {
-            showNotification('API call skipped. Admin token is missing.', false);
-            return;
-        }
-
         try {
+            // Authorization header removed.
             const response = await axios.put(`${ADMIN_API_URL}/users/${userId}/rating`,
-                { newRating: ratingValue },
-                {
-                    headers: { Authorization: `Bearer ${adminToken}` },
-                }
+                { newRating: ratingValue }
             );
 
             if (response.status === 200) {
@@ -133,17 +124,10 @@ const AdminDash = () => {
 
     // --- 3. Delete User Core Logic (DELETE /admin/users/:id) ---
     const deleteUser = async (userId, userName) => {
-        if (!adminToken || adminToken === 'YOUR_ADMIN_AUTH_TOKEN_HERE') {
-            showNotification('API call skipped. Admin token is missing.', false);
-            return;
-        }
 
         try {
-            const response = await axios.delete(`${ADMIN_API_URL}/users/${userId}`, {
-                headers: {
-                    Authorization: `Bearer ${adminToken}`,
-                },
-            });
+            // Authorization header removed.
+            const response = await axios.delete(`${ADMIN_API_URL}/users/${userId}`);
 
             if (response.status === 200) {
                 // Remove the user from the local state
@@ -254,8 +238,7 @@ const AdminDash = () => {
                 </h1>
                 <button
                     onClick={() => {
-                        // On Logout, clear the token and navigate back to admin login
-                        setAdminToken('YOUR_ADMIN_AUTH_TOKEN_HERE');
+                        // On Logout, simply navigate back to admin login
                         navigate('/admin');
                     }}
                     className="flex items-center text-sm font-medium text-red-600 hover:text-red-700 bg-red-100 px-3 py-2 rounded-lg transition"
@@ -307,7 +290,7 @@ const AdminDash = () => {
                             {users.length === 0 && !isLoading ? (
                                 <tr>
                                     <td colSpan="4" className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
-                                        No users found. Ensure you are logged in and the Admin Token is valid.
+                                        No users found.
                                     </td>
                                 </tr>
                             ) : (

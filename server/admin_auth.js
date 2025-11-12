@@ -13,29 +13,12 @@ const pool = new Pool({
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// --- Middleware to verify admin JWT token ---
-const authenticateAdmin = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Access denied. No valid token provided.' });
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        // Crucial check: Ensure the token belongs to an admin role
-        if (decoded.role !== 'admin') {
-            return res.status(403).json({ error: 'Access denied. Insufficient permissions.' });
-        }
-        req.user = decoded; // Attach user payload to request
-        next();
-    } catch (ex) {
-        // Token is invalid, expired, or malformed
-        // FIX: Added 'return' here. This is crucial in Express middleware
-        // to guarantee flow termination after sending the response.
-        return res.status(400).json({ error: 'Invalid or expired token.' });
-    }
+// --- Middleware to verify admin JWT token (REMOVED as per user request) ---
+// ⚠️ WARNING: Token authentication has been removed. All administrative routes are now publicly accessible.
+const bypassAuth = (req, res, next) => {
+    // SECURITY WARNING: Token authentication has been removed as per user request.
+    // All routes are now publicly accessible.
+    next();
 };
 
 
@@ -64,7 +47,7 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid admin credentials' });
         }
 
-        // Create JWT
+        // Create JWT (Keeping the logic, but the token is now ignored by the client for dashboard access)
         const token = jwt.sign(
             { id: user.id, name: user.name, role: 'admin' }, // Ensure 'role: admin' is in payload
             process.env.JWT_SECRET,
@@ -81,11 +64,11 @@ router.post('/login', async (req, res) => {
 
 
 // ----------------------------------------------------------------
-// --- 2. PROTECTED ADMIN ROUTES (Require authenticateAdmin) ---
+// --- 2. ADMIN ROUTES (NO AUTHENTICATION REQUIRED) ---
 // ----------------------------------------------------------------
 
 // GET /admin/users - Fetch all users for the dashboard
-router.get('/users', authenticateAdmin, async (req, res) => {
+router.get('/users', bypassAuth, async (req, res) => {
     try {
         // Select id, name, and rating from the 'auth' table. Order by ID for consistency.
         const result = await pool.query('SELECT id, name, rating FROM auth ORDER BY id ASC');
@@ -97,7 +80,7 @@ router.get('/users', authenticateAdmin, async (req, res) => {
 });
 
 // PUT /admin/users/:id/rating - Update a user's rating
-router.put('/users/:id/rating', authenticateAdmin, async (req, res) => {
+router.put('/users/:id/rating', bypassAuth, async (req, res) => {
     const { id } = req.params;
     const { newRating } = req.body;
 
@@ -125,7 +108,7 @@ router.put('/users/:id/rating', authenticateAdmin, async (req, res) => {
 });
 
 // DELETE /admin/users/:id - Delete a user
-router.delete('/users/:id', authenticateAdmin, async (req, res) => {
+router.delete('/users/:id', bypassAuth, async (req, res) => {
     const { id } = req.params;
 
     try {

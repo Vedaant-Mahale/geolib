@@ -1,19 +1,14 @@
 import React, { useState } from 'react';
 import { LogIn, Library, X } from 'lucide-react';
 import axios from 'axios';
-// Note: Using switch case or props for routing since full router libraries 
-// are typically not available in the single-file environment, but 
-// maintaining the useNavigate signature as requested.
 import { useNavigate } from "react-router-dom";
 
 // --- API Configuration ---
-// The explicit base URL for your Render application.
 const API_BASE_URL = 'https://geolib.onrender.com';
 const ADMIN_LOGIN_URL = `${API_BASE_URL}/admin/login`;
 // -------------------------
 
 const Admin = () => {
-    // This component only handles login, so no isLoginView state is needed.
     const navigate = useNavigate();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -27,8 +22,6 @@ const Admin = () => {
 
         try {
             // Sending request to the new /admin/login endpoint
-            console.log(username);
-            console.log(password);
             const response = await axios.post(ADMIN_LOGIN_URL, {
                 name: username,
                 password: password,
@@ -36,15 +29,9 @@ const Admin = () => {
 
             // Handle successful response (assuming 200 for successful login)
             if (response.status === 200) {
-                const { token, userid } = response.data;
-
-                // Navigate to the administrator dashboard
-                navigate('/admindash', {
-                    state: {
-                        authToken: token,
-                        userId: userid
-                    }
-                });
+                // TOKEN IS NOW IGNORED.
+                // Navigate directly to the administrator dashboard without passing state
+                navigate('/admindash');
 
             } else {
                 // Should not happen for 2xx codes but good for robustness
@@ -72,7 +59,7 @@ const Admin = () => {
         }
     };
 
-    const Icon = LogIn; // Only the login icon is needed
+    const Icon = LogIn;
 
     return (
         <div className="flex flex-col items-center w-screen justify-center min-h-screen bg-gray-100 p-4 font-inter">
