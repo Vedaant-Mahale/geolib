@@ -8,6 +8,7 @@ import Auth from './auth.jsx'
 import ChatBox from './chatbox.jsx'
 import MyBooks from './mybooks.jsx'
 import MyMessages from './mymessages.jsx';
+import Admin from './admin.jsx'
 
 function App() {
 
@@ -19,6 +20,7 @@ function App() {
         <Route path="/chat" element={<ChatBox />} />
         <Route path="/mybooks" element={<MyBooks />} />
         <Route path="/mymessages" element={<MyMessages />} />
+        <Route path="/admin" element={<Admin />}/>
       </Routes>
     </Router>
   )

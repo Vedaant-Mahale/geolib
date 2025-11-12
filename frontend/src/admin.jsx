@@ -1,61 +1,56 @@
 import React, { useState } from 'react';
-import { useNavigate } from "react-router-dom";
-import { LogIn, Library, X, UserPlus } from 'lucide-react';
+import { LogIn, Library, X } from 'lucide-react';
 import axios from 'axios';
+// Note: Using switch case or props for routing since full router libraries 
+// are typically not available in the single-file environment, but 
+// maintaining the useNavigate signature as requested.
+import { useNavigate } from "react-router-dom";
 
 // --- API Configuration ---
 // The explicit base URL for your Render application.
-// Requests will look like: https://geolib.onrender.com/auth/login
 const API_BASE_URL = 'https://geolib.onrender.com';
+const ADMIN_LOGIN_URL = `${API_BASE_URL}/admin/login`;
 // -------------------------
 
-const Auth = () => {
+const Admin = () => {
+    // This component only handles login, so no isLoginView state is needed.
     const navigate = useNavigate();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [isLoginView, setIsLoginView] = useState(true);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
 
-        // Determine the endpoint based on the current view
-        const endpoint = isLoginView ? '/login' : '/register';
-
-        // Update the API_BASE_URL to include the '/auth' prefix (assuming you mounted the router at '/auth')
-        const AUTH_URL = `${API_BASE_URL}/auth`;
-
         try {
-            const response = await axios.post(`${AUTH_URL}${endpoint}`, {
+            // Sending request to the new /admin/login endpoint
+            const response = await axios.post(ADMIN_LOGIN_URL, {
                 name: username,
                 password: password,
             });
 
-            // Handle successful response
+            // Handle successful response (assuming 200 for successful login)
             if (response.status === 200) {
-                // Successful Login
-                // 💡 Destructure token AND userid from the response data
                 const { token, userid } = response.data;
-                // 💡 Navigate to /dash, passing the token and userid via state
-                navigate('/dash', {
+
+                // Navigate to the administrator dashboard
+                navigate('/admindash', {
                     state: {
                         authToken: token,
                         userId: userid
                     }
                 });
 
-            } else if (response.status === 201) {
-                // Successful Register
-                // IMPORTANT: Replacing alert() with a custom error/success message
-                setError('Registration successful! Please sign in with your new account.');
-                setIsLoginView(true); // Switch to login view after successful registration
+            } else {
+                // Should not happen for 2xx codes but good for robustness
+                setError('Login failed with an unknown response.');
             }
 
         } catch (err) {
-            // Handle errors from the server (400, 401, 500)
+            // Handle errors from the server (401, 500, etc.)
             console.error('API Error:', err.response ? err.response.data : err.message);
 
             let errorMessage = 'An unexpected error occurred. Please try again.';
@@ -63,7 +58,7 @@ const Auth = () => {
             if (err.response && err.response.data && err.response.data.error) {
                 errorMessage = err.response.data.error;
             } else if (err.response && err.response.status === 401) {
-                errorMessage = 'Invalid username or password.';
+                errorMessage = 'Invalid admin credentials.';
             } else if (err.response && err.response.status === 500) {
                 errorMessage = 'Server error. Could not connect to the database.';
             }
@@ -75,39 +70,32 @@ const Auth = () => {
         }
     };
 
-    const toggleView = () => {
-        setIsLoginView(!isLoginView);
-        setError('');
-        setUsername('');
-        setPassword('');
-    };
-
-    const Icon = isLoginView ? LogIn : UserPlus;
+    const Icon = LogIn; // Only the login icon is needed
 
     return (
         <div className="flex flex-col items-center w-screen justify-center min-h-screen bg-gray-100 p-4 font-inter">
             <div className="max-w-md p-8 bg-white shadow-xl rounded-xl transition duration-300 hover:shadow-2xl w-full">
                 <div className="flex flex-col items-center mb-6">
-                    <Library className="w-12 h-12 text-indigo-600 mb-3" />
-                    <h1 className="text-3xl font-extrabold text-gray-900">ProxLib Online Library</h1>
+                    <Library className="w-12 h-12 text-red-600 mb-3" />
+                    <h1 className="text-3xl font-extrabold text-gray-900">ProxLib Admin Portal</h1>
                     <p className="text-sm text-gray-500 mt-1">
-                        {isLoginView ? 'Sign in to find books near you.' : 'Create your new library account.'}
+                        Sign in using your administrator credentials.
                     </p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="username">
-                            Username
+                            Admin Username
                         </label>
                         <div className="relative">
                             <input
                                 id="username"
                                 type="email"
-                                placeholder="email@gmail.com"
+                                placeholder="admin@proxadmin.com"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 transition duration-150"
                                 required
                             />
                         </div>
@@ -124,9 +112,8 @@ const Auth = () => {
                                 placeholder="******"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 transition duration-150"
                                 required
-                                minLength={isLoginView ? 0 : 8}
                             />
                         </div>
                     </div>
@@ -141,7 +128,7 @@ const Auth = () => {
                     <button
                         type="submit"
                         disabled={isLoading || !username || !password}
-                        className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isLoading ? (
                             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -151,38 +138,30 @@ const Auth = () => {
                         ) : (
                             <>
                                 <Icon className="mr-2 h-5 w-5" />
-                                {isLoginView ? 'Sign In' : 'Register Account'}
+                                {'Admin Sign In'}
                             </>
                         )}
                     </button>
                 </form>
 
-                <div className="mt-6 text-center">
-                    <button
-                        onClick={toggleView}
-                        className="text-sm font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none"
-                    >
-                        {isLoginView
-                            ? "Don't have an account? Register here."
-                            : "Already have an account? Sign In."
-                        }
-                    </button>
+                {/* Information block */}
+                <div className="mt-6 text-center text-sm text-gray-500">
+                    Access restricted to system administrators.
                 </div>
 
-                {/* --- NEW ADMIN LOGIN BUTTON --- */}
+                {/* --- NEW USER LOGIN BUTTON --- */}
                 <div className="mt-4 pt-4 border-t border-gray-200 text-center">
                     <button
-                        onClick={() => navigate('/admin')}
-                        className="text-sm font-medium text-red-600 hover:text-red-500 focus:outline-none"
+                        onClick={() => navigate('/')}
+                        className="text-sm font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none"
                     >
-                        Admin Login Portal
+                        &larr; Back to User Login / Register
                     </button>
                 </div>
                 {/* ------------------------------ */}
-
             </div>
         </div>
     );
 };
 
-export default Auth;
+export default Admin;
