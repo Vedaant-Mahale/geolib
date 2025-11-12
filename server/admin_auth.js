@@ -72,7 +72,15 @@ router.get('/users', bypassAuth, async (req, res) => {
     try {
         // Select id, name, and rating from the 'auth' table. Order by ID for consistency.
         const result = await pool.query('SELECT id, name, rating FROM auth ORDER BY id ASC');
-        res.status(200).json(result.rows);
+
+        // FIX: Convert rating from string (due to numeric type) to float
+        const users = result.rows.map(user => ({
+            ...user,
+            // Ensure rating is explicitly a float, handling null/undefined safely
+            rating: user.rating !== null && user.rating !== undefined ? parseFloat(user.rating) : 0
+        }));
+
+        res.status(200).json(users);
     } catch (err) {
         console.error('Error fetching users:', err);
         res.status(500).json({ error: 'Failed to retrieve users' });
@@ -100,7 +108,12 @@ router.put('/users/:id/rating', bypassAuth, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        res.status(200).json({ message: 'Rating updated successfully', user: result.rows[0] });
+        const updatedUser = result.rows[0];
+
+        // FIX: Convert the returned rating from string to float before sending to client
+        updatedUser.rating = parseFloat(updatedUser.rating);
+
+        res.status(200).json({ message: 'Rating updated successfully', user: updatedUser });
     } catch (err) {
         console.error(`Error updating rating for user ${id}:`, err);
         res.status(500).json({ error: 'Failed to update rating' });
