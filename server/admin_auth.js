@@ -13,7 +13,35 @@ const pool = new Pool({
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// --- Admin Login API (Targets 'admin' table) ---
+// --- Middleware to verify admin JWT token ---
+const authenticateAdmin = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Access denied. No valid token provided.' });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        // Crucial check: Ensure the token belongs to an admin role
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ error: 'Access denied. Insufficient permissions.' });
+        }
+        req.user = decoded; // Attach user payload to request
+        next();
+    } catch (ex) {
+        // Token is invalid, expired, or malformed
+        // FIX: Added 'return' here. This is crucial in Express middleware
+        // to guarantee flow termination after sending the response.
+        return res.status(400).json({ error: 'Invalid or expired token.' });
+    }
+};
+
+
+// ----------------------------------------------------------------
+// --- 1. Admin Login API (Targets 'admin' table) ---
+// ----------------------------------------------------------------
 router.post('/login', async (req, res) => {
     const { name, password } = req.body;
 
@@ -25,18 +53,20 @@ router.post('/login', async (req, res) => {
         // Find admin user in the 'admin' table
         const result = await pool.query('SELECT * FROM admin WHERE name = $1', [name]);
         if (result.rows.length === 0) {
-            return res.status(401).json({ error: 'Invalid admin credentials'});
+            return res.status(401).json({ error: 'Invalid admin credentials' });
         }
 
         const user = result.rows[0];
 
-        if (password != user.password) {
+        // Compare password hash securely using bcrypt
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
             return res.status(401).json({ error: 'Invalid admin credentials' });
         }
 
         // Create JWT
         const token = jwt.sign(
-            { id: user.id, name: user.name, role: 'admin' }, // Added 'role: admin' to the payload
+            { id: user.id, name: user.name, role: 'admin' }, // Ensure 'role: admin' is in payload
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRES_IN }
         );
@@ -46,6 +76,74 @@ router.post('/login', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Admin login failed' });
+    }
+});
+
+
+// ----------------------------------------------------------------
+// --- 2. PROTECTED ADMIN ROUTES (Require authenticateAdmin) ---
+// ----------------------------------------------------------------
+
+// GET /admin/users - Fetch all users for the dashboard
+router.get('/users', authenticateAdmin, async (req, res) => {
+    try {
+        // Select id, name, and rating from the 'auth' table. Order by ID for consistency.
+        const result = await pool.query('SELECT id, name, rating FROM auth ORDER BY id ASC');
+        res.status(200).json(result.rows);
+    } catch (err) {
+        console.error('Error fetching users:', err);
+        res.status(500).json({ error: 'Failed to retrieve users' });
+    }
+});
+
+// PUT /admin/users/:id/rating - Update a user's rating
+router.put('/users/:id/rating', authenticateAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { newRating } = req.body;
+
+    // Input validation: ensure rating is a non-negative number
+    if (newRating === undefined || isNaN(parseFloat(newRating)) || parseFloat(newRating) < 0) {
+        return res.status(400).json({ error: 'Valid positive numeric rating required' });
+    }
+
+    try {
+        // Update the rating column (numeric(10,2) in the DB)
+        const result = await pool.query(
+            'UPDATE auth SET rating = $1 WHERE id = $2 RETURNING id, name, rating',
+            [parseFloat(newRating).toFixed(2), id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.status(200).json({ message: 'Rating updated successfully', user: result.rows[0] });
+    } catch (err) {
+        console.error(`Error updating rating for user ${id}:`, err);
+        res.status(500).json({ error: 'Failed to update rating' });
+    }
+});
+
+// DELETE /admin/users/:id - Delete a user
+router.delete('/users/:id', authenticateAdmin, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        // The CASCADE constraint on `user_profile` will delete related rows automatically.
+        const result = await pool.query('DELETE FROM auth WHERE id = $1 RETURNING id', [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.status(200).json({ message: `User ${id} deleted successfully` });
+    } catch (err) {
+        console.error(`Error deleting user ${id}:`, err);
+        // Specific error handling for foreign key constraint violation (if cascade fails)
+        if (err.code === '23503') {
+            return res.status(500).json({ error: 'Cannot delete user due to existing data dependencies.' });
+        }
+        res.status(500).json({ error: 'Failed to delete user' });
     }
 });
 
