@@ -50,13 +50,6 @@ const Dashboard = () => {
   // --- 💡 Auth Guard Effect ---
   // This effect runs once to check if we received an auth token.
   // If not, it redirects the user back to the login page.
-  useEffect(() => {
-    if (!userToken) {
-      // Note: In a real app, this would display a custom modal message first.
-      console.warn('Unauthorized access: Authentication token missing. Redirecting to login.');
-      navigate('/', { replace: true });
-    }
-  }, [userToken, navigate]);
 
 
   // 1. Calculate the distance for all books dynamically
