@@ -111,13 +111,6 @@ const Dashboard = () => {
   };
 
   // If the token is not available *yet* (during the first render before the redirect effect runs), render a loading/error state.
-  if (!userToken) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-xl font-medium text-gray-700">Checking authorization...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen w-screen bg-gray-50 p-4 sm:p-8">
